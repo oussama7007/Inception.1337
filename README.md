@@ -1,6 +1,7 @@
 # Inception.1337
 
 
+
 1. **Containers vs VMs vs processes** — why Docker exists at all
 2. **Images, layers, Dockerfiles** — why no `latest` tag, why a specific base image
 3. **PID 1 and `exec`** — why no `tail -f` / `sleep infinity`
@@ -13,3 +14,4 @@
 10. **Docker Compose orchestration** — how the pieces get wired together
 11. **Full request lifecycle** — tracing one HTTP request through the whole stack
 12. **Defense mechanics** — how evaluators probe, and the live-modification test
+
