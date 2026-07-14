@@ -40,3 +40,26 @@ usermod: Modify a user account.
 oait-si-: Your specific username.
 
 By adding yourself to that group, you gave your normal user account the permanent VIP pass required to control the Docker engine safely and easily from your Mac terminal.
+
+
+What is Docker?
+
+Docker is a platform that packages applications and their dependencies into lightweight, isolated environments called containers. This allows applications to run consistently across different machines and operating systems.
+
+Why this is better:
+
+Docker is a platform, not just software.
+"Dependencies" includes libraries, runtimes, and configuration files.
+What is the role of Docker?
+
+Docker packages an application together with everything it needs to run into a container. This ensures the application behaves the same on every machine, eliminating the "works on my machine" problem.
+
+What is a Docker image?
+
+A Docker image is a read-only blueprint (or template) used to create Docker containers. It contains everything needed to run an application, including the application code, runtime, libraries, system tools, and configuration files.
+
+I recommend adding "read-only", because it's one of the defining characteristics of an image.
+
+What is a Docker container?
+
+A Docker container is a running instance of a Docker image. It is an isolated environment that runs an application with all of its dependencies while sharing the host operating system's kernel.
