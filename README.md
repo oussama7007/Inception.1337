@@ -1,65 +1,558 @@
-# Inception.1337
+# Inception
 
+> A 42 School project introducing Docker, containerization, networking,
+> and service orchestration using **Nginx**, **WordPress (PHP-FPM)**,
+> **MariaDB**, and **Docker Compose**.
 
+> **Note:** This README is a polished and organized version of the
+> concepts provided in the project notes.
 
-1. **Containers vs VMs vs processes** — why Docker exists at all
-2. **Images, layers, Dockerfiles** — why no `latest` tag, why a specific base image
-3. **PID 1 and `exec`** — why no `tail -f` / `sleep infinity`
-4. **Env vars vs Docker secrets** — the confidentiality model
-5. **Docker networking** — bridge networks, service discovery, why `-link`/`host` are banned
-6. **Volumes vs bind mounts** — persistence model
-7. **TLS basics** — what "TLS 1.2/1.3 only" actually means
-8. **The 3-tier architecture** — nginx → php-fpm → mariadb, and why php-fpm has no bundled server
-9. **WordPress specifics** — wp-config, wp-cli, the two-user requirement
-10. **Docker Compose orchestration** — how the pieces get wired together
-11. **Full request lifecycle** — tracing one HTTP request through the whole stack
-12. **Defense mechanics** — how evaluators probe, and the live-modification test
+------------------------------------------------------------------------
 
-1. The VIP List (Linux Groups)
-In Linux, security is everything. Every file, folder, and application checks who you are before letting you do anything. To make managing permissions easier, Linux uses Groups. Think of a group like a VIP list for a specific club. If your username is on the list, you are granted access to whatever that group controls.
+# Table of Contents
 
-2. The Docker Daemon (The Engine)
-When you installed Docker, it started a continuous background program called the Docker Daemon (dockerd). This daemon is the heavy lifter—it talks directly to the Linux kernel to create isolated networks, allocate hard drive space, and spawn your containers.
+-   Project Overview
+-   Docker Fundamentals
+-   Containers vs Virtual Machines
+-   Docker Images
+-   Docker Containers
+-   Linux Groups
+-   Docker Daemon
+-   Docker Group
+-   Dockerfile
+-   Docker Compose
+-   YAML
+-   Networking
+-   Volumes
+-   Environment Variables vs Docker Secrets
+-   Project Architecture
+-   WordPress
+-   MariaDB
+-   Nginx
+-   Request Lifecycle
+-   TLS
+-   docker-compose.yml Breakdown
+-   Important Docker Concepts
 
-Because doing those things deeply affects the host machine, the Docker Daemon strictly runs as the root user (the ultimate system administrator).
+------------------------------------------------------------------------
 
-3. The Problem
-By default, if a normal, non-root user (like oait-si-) types a command like docker ps to see running containers, the daemon looks at the user, sees they aren't the root administrator, and immediately blocks them with a Permission Denied error.
+# Project Overview
 
-If we left it like this, you would be forced to type sudo docker... or switch to the su - root user every single time you wanted to run a project command. That gets incredibly tedious.
+The goal of **Inception** is to build a complete web infrastructure
+using Docker.
 
-4. The Solution: The Docker Group
-When Docker is installed, it automatically creates a special new Linux group literally just called docker. It configures the daemon with a strict rule: "If a user is not root, but they are on this VIP list, allow them to give you commands."
+Instead of installing software directly on the operating system, every
+service runs inside its own isolated container.
 
-When you ran the command usermod -aG docker oait-si-:
+The project consists of three main services:
 
-usermod: Modify a user account.
+-   **Nginx** -- Web server and reverse proxy
+-   **WordPress** -- PHP application running with PHP-FPM
+-   **MariaDB** -- Database server
 
--aG docker: Append the user to a secondary Group named docker.
+These services communicate through a custom Docker network while storing
+persistent data in Docker volumes.
 
-oait-si-: Your specific username.
+------------------------------------------------------------------------
 
-By adding yourself to that group, you gave your normal user account the permanent VIP pass required to control the Docker engine safely and easily from your Mac terminal.
+# Docker Fundamentals
 
+## What is Docker?
 
-What is Docker?
+Docker is a platform that packages applications together with everything
+they need to run into lightweight, isolated environments called
+**containers**.
 
-Docker is a platform that packages applications and their dependencies into lightweight, isolated environments called containers. This allows applications to run consistently across different machines and operating systems.
+A container includes:
 
-Why this is better:
+-   Application code
+-   Runtime
+-   Libraries
+-   Dependencies
+-   Configuration files
 
-Docker is a platform, not just software.
-"Dependencies" includes libraries, runtimes, and configuration files.
-What is the role of Docker?
+Because everything required is packaged together, applications behave
+the same on every machine, eliminating the classic *"works on my
+machine"* problem.
 
-Docker packages an application together with everything it needs to run into a container. This ensures the application behaves the same on every machine, eliminating the "works on my machine" problem.
+------------------------------------------------------------------------
 
-What is a Docker image?
+## Why Docker?
 
-A Docker image is a read-only blueprint (or template) used to create Docker containers. It contains everything needed to run an application, including the application code, runtime, libraries, system tools, and configuration files.
+Without Docker:
 
-I recommend adding "read-only", because it's one of the defining characteristics of an image.
+-   Every developer installs software manually.
+-   Different operating systems behave differently.
+-   Dependency versions conflict.
+-   Deployment becomes difficult.
 
-What is a Docker container?
+With Docker:
 
-A Docker container is a running instance of a Docker image. It is an isolated environment that runs an application with all of its dependencies while sharing the host operating system's kernel.
+-   Identical environments everywhere.
+-   Reproducible builds.
+-   Portable applications.
+-   Better isolation between services.
+
+------------------------------------------------------------------------
+
+# Containers vs Virtual Machines
+
+  Containers              Virtual Machines
+  ----------------------- ---------------------------------
+  Share the host kernel   Include a full operating system
+  Lightweight             Heavy
+  Fast startup            Slow startup
+  Low resource usage      Higher resource usage
+
+Containers isolate processes while sharing the host kernel, making them
+much more efficient than virtual machines.
+
+------------------------------------------------------------------------
+
+# Docker Images
+
+A **Docker image** is a **read-only template** used to create
+containers.
+
+It contains:
+
+-   Application code
+-   Runtime
+-   Libraries
+-   System tools
+-   Configuration
+
+Images are immutable.
+
+Containers are created from images.
+
+------------------------------------------------------------------------
+
+# Docker Containers
+
+A Docker container is a running instance of a Docker image.
+
+Containers:
+
+-   run applications
+-   isolate processes
+-   share the host kernel
+-   can be created, stopped, removed and recreated
+
+------------------------------------------------------------------------
+
+# Linux Groups
+
+Linux permissions are based on:
+
+-   User
+-   Group
+-   Others
+
+A group is simply a collection of users sharing the same permissions.
+
+Think of a Linux group as a VIP access list.
+
+------------------------------------------------------------------------
+
+# Docker Daemon
+
+Docker runs a background service called **dockerd**.
+
+The Docker daemon is responsible for:
+
+-   building images
+-   creating containers
+-   creating networks
+-   creating volumes
+-   communicating with the Linux kernel
+
+Since these operations affect the operating system, the daemon runs as
+**root**.
+
+------------------------------------------------------------------------
+
+# Docker Group
+
+By default, normal users cannot communicate with the Docker daemon.
+
+Docker automatically creates a Linux group named **docker**.
+
+Adding yourself to this group:
+
+``` bash
+sudo usermod -aG docker <username>
+```
+
+allows Docker commands to be executed without using `sudo`.
+
+------------------------------------------------------------------------
+
+# Dockerfile
+
+A Dockerfile is a text file containing instructions used to build a
+custom Docker image.
+
+Example:
+
+``` dockerfile
+FROM debian:bookworm
+
+RUN apt update && apt install -y nginx
+
+COPY . /app
+
+CMD ["nginx","-g","daemon off;"]
+```
+
+------------------------------------------------------------------------
+
+# Docker Compose
+
+Docker Compose manages multiple containers as one application.
+
+Instead of starting every service manually:
+
+``` bash
+docker compose up
+```
+
+builds images, creates containers, networks, volumes and starts every
+service.
+
+------------------------------------------------------------------------
+
+# YAML
+
+YAML stands for:
+
+> YAML Ain't Markup Language
+
+Docker Compose uses YAML because it is clean and human-readable.
+
+Example:
+
+``` yaml
+services:
+  nginx:
+    image: nginx
+
+  mariadb:
+    image: mariadb
+```
+
+YAML is also used by:
+
+-   Kubernetes
+-   GitHub Actions
+-   Ansible
+
+------------------------------------------------------------------------
+
+# Networking
+
+The Inception subject requires creating a **custom bridge network**.
+
+Why?
+
+-   Better isolation.
+-   Explicit configuration.
+-   Automatic DNS resolution.
+
+Containers communicate using service names instead of IP addresses.
+
+Example:
+
+    WordPress
+         │
+         ▼
+     MariaDB
+
+WordPress simply connects to:
+
+    mariadb
+
+Docker automatically resolves the hostname.
+
+------------------------------------------------------------------------
+
+# Volumes
+
+Containers are temporary.
+
+Deleting a container removes everything stored inside it.
+
+Docker volumes store data outside containers, allowing it to survive
+container recreation.
+
+This project typically uses:
+
+## MariaDB Volume
+
+Stores:
+
+-   databases
+-   tables
+-   users
+
+## WordPress Volume
+
+Stores:
+
+-   uploads
+-   plugins
+-   themes
+-   website files
+
+------------------------------------------------------------------------
+
+# Environment Variables vs Docker Secrets
+
+## Environment Variables
+
+Useful for:
+
+-   usernames
+-   database names
+-   ports
+-   configuration
+
+Not recommended for sensitive production credentials.
+
+## Docker Secrets
+
+Used for:
+
+-   passwords
+-   certificates
+-   private keys
+
+Secrets provide a more secure way of handling confidential information.
+
+------------------------------------------------------------------------
+
+# Architecture
+
+               Internet
+                   │
+                   ▼
+            +--------------+
+            |    Nginx     |
+            +--------------+
+                   │
+                   ▼
+            +--------------+
+            |  WordPress   |
+            |   PHP-FPM    |
+            +--------------+
+                   │
+                   ▼
+            +--------------+
+            |   MariaDB    |
+            +--------------+
+
+------------------------------------------------------------------------
+
+# WordPress
+
+WordPress is a free and open-source Content Management System (CMS).
+
+It allows users to:
+
+-   publish pages
+-   write blog posts
+-   install plugins
+-   manage themes
+-   upload media
+
+It stores all persistent information inside MariaDB.
+
+------------------------------------------------------------------------
+
+# MariaDB
+
+MariaDB is an open-source relational database.
+
+It stores:
+
+-   users
+-   posts
+-   comments
+-   pages
+-   settings
+-   plugins
+-   themes
+
+Without MariaDB, WordPress has no persistent data.
+
+------------------------------------------------------------------------
+
+# Nginx
+
+Nginx is a high-performance web server and reverse proxy.
+
+In this project it:
+
+-   accepts HTTPS requests
+-   terminates TLS
+-   serves static files
+-   forwards PHP requests to PHP-FPM
+
+Only Nginx is exposed to the outside world.
+
+------------------------------------------------------------------------
+
+# Request Lifecycle
+
+    Browser
+       │
+       ▼
+     Nginx
+       │
+       ▼
+    WordPress
+       │
+       ▼
+    MariaDB
+
+1.  Browser sends HTTPS request.
+2.  Nginx receives it.
+3.  PHP requests are forwarded to WordPress.
+4.  WordPress queries MariaDB if data is required.
+5.  HTML is generated.
+6.  Nginx returns the response to the browser.
+
+------------------------------------------------------------------------
+
+# TLS
+
+TLS (Transport Layer Security) secures communication between clients and
+servers.
+
+It provides:
+
+-   Confidentiality
+-   Integrity
+-   Authentication
+
+TLS replaces SSL and modern deployments should use TLS 1.2 or TLS 1.3.
+
+------------------------------------------------------------------------
+
+# docker-compose.yml Breakdown
+
+``` yaml
+version: "3"
+
+services:
+  mariadb:
+    build:
+      context: ./requirements/mariadb
+    networks:
+      - inception_network
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  wordpress:
+    build:
+      context: ./requirements/wordpress
+    networks:
+      - inception_network
+    volumes:
+      - wordpress_data:/var/www/html
+
+  nginx:
+    build:
+      context: ./requirements/nginx
+    ports:
+      - "443:443"
+    networks:
+      - inception_network
+    volumes:
+      - wordpress_data:/var/www/html
+
+networks:
+  inception_network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  wordpress_data:
+```
+
+### Explanation
+
+-   **version** -- Compose file format.
+-   **services** -- List of containers.
+-   **build** -- Build a custom image.
+-   **context** -- Build directory.
+-   **container_name** -- Fixed container name.
+-   **restart: always** -- Restart automatically.
+-   **ports** -- Host-to-container port mapping.
+-   **networks** -- Attach services to the custom bridge.
+-   **volumes** -- Persistent storage.
+
+------------------------------------------------------------------------
+
+# Important Docker Concepts
+
+## Why not use the `latest` tag?
+
+Using `latest` makes builds unpredictable.
+
+Always pin specific versions to ensure reproducible builds.
+
+## Why use `exec`?
+
+The main process inside a container should become PID 1.
+
+Using:
+
+``` bash
+exec nginx -g "daemon off;"
+```
+
+allows Docker to correctly handle signals.
+
+Using:
+
+``` bash
+tail -f /dev/null
+sleep infinity
+```
+
+only keeps the container alive artificially and is considered bad
+practice.
+
+## Why PHP-FPM?
+
+PHP-FPM executes PHP scripts.
+
+It is **not** a web server.
+
+Nginx receives HTTP requests and forwards PHP scripts to PHP-FPM.
+
+------------------------------------------------------------------------
+
+# Summary
+
+This project demonstrates:
+
+-   Docker
+-   Containers
+-   Images
+-   Dockerfiles
+-   Docker Compose
+-   Custom bridge networks
+-   Volumes
+-   TLS
+-   Nginx
+-   WordPress
+-   MariaDB
+-   Multi-container architecture
+-   Persistent storage
+-   Service isolation
+-   Inter-container communication
+
+Together, these technologies create a secure, modular, reproducible web
+infrastructure.
