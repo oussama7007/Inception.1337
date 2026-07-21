@@ -19,6 +19,8 @@ services:
       context: ./requirements/wordpress
       dockerfile: Dockerfile
     container_name: wordpress
+    env_file:
+      - .env
     restart: always
     networks:
       - inception_network
